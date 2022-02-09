@@ -1,27 +1,45 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { getOperationName } from "@apollo/client/utilities";
-import type { Flipper } from "react-native-flipper";
-import { getQueries, getQueryData } from "./flipperUtils";
-import type { ApolloClientType } from "./typings";
+import { getOperationName } from '@apollo/client/utilities';
+import type { Flipper } from 'react-native-flipper';
+import { getQueries, getQueryData } from './flipperUtils';
+import type { ApolloClientType, MutationData, QueryData } from './typings';
+
 
 let counter = 0;
 
-function getAllQueries(client: ApolloClientType) {
-  // @ts-expect-error todo
-  if (!client || !client.queryManager) {
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    return () => {};
-  }
+function getTime():string{
+  const date=new Date()
+  return `${date.getHours()}:${date.getMinutes()}`
+}
 
-  // @ts-expect-error todo
-  const allQueries = getQueries(client.queryManager.queries);
+function extractQueries(client: ApolloClientType): Map<any, any> {
+  // @ts-expect-error queryManager is private method
+  if (!client || !client.queryManager) {
+    return new Map();
+  }
+  // @ts-expect-error queryManager is private method
+  return client.queryManager.queries;
+}
+
+
+
+function getAllQueries(client: ApolloClientType): Array<QueryData | undefined> {
+
+  // console.log("==========")
+  // console.log("queries: ", client.queryManager.queries);
+  // console.log("==========")
+
+  const queryMap = extractQueries(client);
+
+  const allQueries = getQueries(queryMap);
+
+
 
   return allQueries?.map(getQueryData);
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function getMutationData(allMutations) {
+function getMutationData(allMutations): Array<MutationData> {
   return [...Object.keys(allMutations)]?.map((key) => {
     const { mutation, variables, loading, error } = allMutations[key];
 
@@ -38,8 +56,7 @@ function getMutationData(allMutations) {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function getAllMutations(client: ApolloClientType) {
+function getAllMutations(client: ApolloClientType): Array<MutationData> {
   // @ts-expect-error todo todo
   const allMutations = client.queryManager.mutationStore || {};
 
@@ -56,31 +73,20 @@ function getAllMutations(client: ApolloClientType) {
 export const initializeFlipperUtils = (
   flipperConnection: Flipper.FlipperConnection,
   apolloClient: ApolloClientType,
-) => {
-  const logger = ({
-    // @ts-ignore
-    state: { queries, mutations },
-    // @ts-ignore
-    dataWithOptimisticResults,
-  }): void => {
+): void => {
+  const logger = (logs): void => {
     counter++;
-
-    // console.log('queries', JSON.stringify(queries));
-    // console.log('mutations', JSON.stringify(mutations));
-    // console.log('inspector', JSON.stringify(inspector));
 
     const payload = {
       id: counter,
+      lastUpdateAt: getTime(),
       queries: getAllQueries(apolloClient),
       mutations: getAllMutations(apolloClient),
       cache: apolloClient.cache.extract(true),
     };
 
-    // console.log('logger: ', payload?.mutations);
-    // console.log(' ');
-    console.log({ initial: JSON.stringify(payload.cache) });
 
-    flipperConnection.send("gql:data", payload);
+    flipperConnection.send('gql:data', payload);
 
     // if (currentConnection !== null) {
     //   currentConnection.send('broadcast:new', enqueued)
@@ -88,7 +94,8 @@ export const initializeFlipperUtils = (
   };
 
   const initial = {
-    id: "initial",
+    id: 'initial',
+    lastUpdateAt: getTime(),
     queries: getAllQueries(apolloClient),
     mutations: getAllMutations(apolloClient),
     cache: apolloClient.cache.extract(true),
@@ -96,10 +103,10 @@ export const initializeFlipperUtils = (
 
   //   console.log({ initial: JSON.stringify(initial.cache) });
 
-  console.log("initial");
-  console.log(initial.mutations);
+  // console.log("initial");
+  // console.log(initial.mutations);
 
-  flipperConnection.send("gql:data", initial);
+  flipperConnection.send('gql:data', initial);
 
   // @ts-expect-errors
   apolloClient.__actionHookForDevTools(logger);

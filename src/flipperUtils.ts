@@ -1,27 +1,23 @@
+/* eslint-disable consistent-return */
 import type { QueryInfo } from "@apollo/client/core/QueryInfo";
 import { getOperationName } from "@apollo/client/utilities";
 import { print } from "graphql";
 import type { Query } from "./typings";
 
-type WatchedQuery = Query & {
-  queryString: string;
-  cachedData: object;
-};
 
 let done = true;
 
-export function getQueryData(query, key: number): WatchedQuery | undefined {
+export function getQueryData(query, key: number): QueryData | undefined {
   if (!query || !query.document) return;
   // TODO: The current designs do not account for non-cached data.
   // We need a workaround to show that data + we should surface
   // the FetchPolicy.
   const name = getOperationName(query?.document);
-  if (name === "IntrospectionQuery") {
+  if (name === 'IntrospectionQuery') {
     return;
   }
 
   if (done) {
-    console.log("asdfasdf");
     console.log(JSON.stringify(query));
     done = false;
     return;
@@ -36,7 +32,7 @@ export function getQueryData(query, key: number): WatchedQuery | undefined {
   };
 }
 
-export function getQueries(queryMap): QueryInfo[] {
+export function getQueries(queryMap:Map<any, any>): QueryInfo[] {
   let queries: QueryInfo[] = [];
 
   if (queryMap) {
